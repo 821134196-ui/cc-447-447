@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>换热站供暖曲线与报修联动系统</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- 登录 -->
+<div id="login" class="login-wrap hidden">
+  <div class="login-card">
+    <div class="brand"><span class="dot dot-supply"></span><span class="dot dot-return"></span>
+      <h1>换热站运行联动平台</h1></div>
+    <p class="muted">选择演示账号登录（无需密码）</p>
+    <div id="login-users" class="login-users"></div>
+    <p id="login-err" class="err"></p>
+  </div>
+</div>
+
+<!-- 主界面 -->
+<div id="app" class="hidden">
+  <header class="topbar">
+    <div class="topbar-left">
+      <strong>换热站运行联动平台</strong>
+      <select id="station-select" class="select"></select>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="overview" class="tab active">站点总览</button>
+      <button data-tab="curves" class="tab">曲线编辑</button>
+      <button data-tab="trends" class="tab">实时趋势</button>
+      <button data-tab="commands" class="tab">指令审批</button>
+      <button data-tab="tickets" class="tab">报修聚合</button>
+      <button data-tab="shifts" class="tab">班次交接</button>
+      <button data-tab="callbacks" class="tab">回访统计</button>
+    </nav>
+    <div class="topbar-right">
+      <button id="bell" class="bell" title="提醒">🔔<span id="bell-n" class="bell-n hidden">0</span></button>
+      <span id="user-badge" class="badge"></span>
+      <button id="logout-btn" class="btn btn-ghost">退出</button>
+    </div>
+  </header>
+
+  <main class="content">
+    <!-- 站点总览 -->
+    <section id="tab-overview" class="tab-panel">
+      <div id="ov-kpis" class="kpi-row"></div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>实时测点</h3>
+          <div id="ov-readings" class="reading-grid"></div>
+        </div>
+        <div class="card">
+          <h3>待处置事件（按类型分开）</h3>
+          <div id="ov-events"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>调节指令概况</h3>
+        <div id="ov-commands" class="cmd-strip"></div>
+      </div>
+    </section>
+
+    <!-- 曲线编辑 -->
+    <section id="tab-curves" class="tab-panel hidden">
+      <div class="card">
+        <div class="row-between">
+          <h3>楼栋目标供暖曲线</h3>
+          <select id="curve-building" class="select"></select>
+        </div>
+        <p class="muted">曲线含义：室外温度越低，供水温度越高。提交后生成调节指令，进入「待复核」。
+          越限调整将被标记，必须由站长批准。</p>
+        <div class="grid-curve">
+          <div>
+            <table class="table" id="curve-table">
+              <thead><tr><th>室外温度 ℃</th><th>供水温度 ℃</th><th>回水温度 ℃</th><th></th></tr></thead>
+              <tbody></tbody>
+            </table>
+            <button id="curve-add" class="btn btn-ghost">＋ 增加锚点</button>
+            <div class="curve-meta">
+              <label>基于版本 <input id="curve-base" class="input mini" readonly></label>
+              <input id="curve-note" class="input" placeholder="调整说明（可选）">
+            </div>
+            <div id="curve-msg" class="msg"></div>
+            <button id="curve-submit" class="btn btn-primary">提交为调节指令</button>
+          </div>
+          <div class="curve-preview">
+            <svg id="curve-svg" viewBox="0 0 460 320"></svg>
+            <div class="legend">
+              <span><i class="lg lg-supply"></i>供水温度</span>
+              <span><i class="lg lg-return"></i>回水温度</span>
+            </div>
+            <div id="curve-history" class="version-list"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 实时趋势 -->
+    <section id="tab-trends" class="tab-panel hidden">
+      <div class="card">
+        <div class="row-between wrap">
+          <h3>实时趋势</h3>
+          <div class="filters">
+            <select id="tr-range" class="select">
+              <option value="6">近 6 小时</option>
+              <option value="24" selected>近 24 小时</option>
+              <option value="48">近 48 小时</option>
+            </select>
+            <select id="tr-mode" class="select">
+              <option value="single">单楼栋（供水红 / 回水蓝）</option>
+              <option value="overlay">多楼栋供水温度叠加</option>
+            </select>
+            <select id="tr-building" class="select"></select>
+            <span id="tr-overlay-pick" class="overlay-pick hidden"></span>
+          </div>
+        </div>
+        <svg id="tr-temp" viewBox="0 0 960 300"></svg>
+        <div id="tr-legend" class="legend" style="justify-content:flex-start">
+          <span><i class="lg lg-supply"></i>供水温度</span>
+          <span><i class="lg lg-return"></i>回水温度</span>
+        </div>
+        <svg id="tr-od" viewBox="0 0 960 140" class="sub-chart"></svg>
+        <svg id="tr-pressure" viewBox="0 0 960 160" class="sub-chart"></svg>
+      </div>
+    </section>
+
+    <!-- 指令审批 -->
+    <section id="tab-commands" class="tab-panel hidden">
+      <div class="grid-cmd">
+        <div class="card">
+          <div class="row-between">
+            <h3>指令列表</h3>
+            <select id="cmd-filter" class="select">
+              <option value="">全部状态</option>
+              <option value="pending_review">待复核</option>
+              <option value="pending_execution">待执行</option>
+              <option value="observing">生效观察</option>
+              <option value="ended">结束</option>
+              <option value="rejected">已驳回</option>
+            </select>
+          </div>
+          <div id="cmd-list" class="cmd-list"></div>
+        </div>
+        <div class="card" id="cmd-detail-card">
+          <h3>指令详情 / 审批</h3>
+          <div id="cmd-detail" class="muted">从左侧选择一条指令</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 报修聚合 -->
+    <section id="tab-tickets" class="tab-panel hidden">
+      <div class="card">
+        <div class="row-between wrap">
+          <h3>报修密度（近 24 小时，微型条形）</h3>
+          <button id="tk-new" class="btn btn-primary">登记报修</button>
+        </div>
+        <table class="table density-table">
+          <thead><tr><th>站点</th><th>楼栋</th><th class="num">冷</th><th class="num">热</th>
+            <th class="num">其他</th><th class="num">待处理</th><th>密度</th></tr></thead>
+          <tbody id="tk-density"></tbody>
+        </table>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>报修工单</h3>
+          <div class="filters">
+            <select id="tk-state" class="select">
+              <option value="">全部</option>
+              <option value="open">待处理</option>
+              <option value="processing">处置中</option>
+              <option value="merged">已归并</option>
+              <option value="resolved">已解决</option>
+              <option value="reopened">回访不满意重开</option>
+            </select>
+          </div>
+          <div id="tk-list" class="ticket-list"></div>
+        </div>
+        <div class="card">
+          <h3>运行事件（七类分开处置）</h3>
+          <div class="filters">
+            <select id="ev-status" class="select">
+              <option value="open">待处置</option>
+              <option value="handled">已处置</option>
+              <option value="">全部</option>
+            </select>
+          </div>
+          <div id="ev-list" class="event-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 班次交接 -->
+    <section id="tab-shifts" class="tab-panel hidden">
+      <div class="grid-2">
+        <div class="card">
+          <h3>当前班次</h3>
+          <div id="sh-active"></div>
+        </div>
+        <div class="card">
+          <h3>交接附件（本地目录）</h3>
+          <div id="sh-attach"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>历史班次与不可覆盖快照</h3>
+        <div id="sh-list" class="shift-list"></div>
+      </div>
+    </section>
+
+    <!-- 回访统计 -->
+    <section id="tab-callbacks" class="tab-panel hidden">
+      <div id="cb-kpis" class="kpi-row"></div>
+      <div class="grid-2">
+        <div class="card"><h3>按报修类别回访结果</h3><svg id="cb-svg" viewBox="0 0 480 260"></svg></div>
+        <div class="card"><h3>不满意 / 重开工单</h3><div id="cb-bad" class="ticket-list"></div></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- 通用弹窗 -->
+<div id="modal" class="modal hidden"><div class="modal-card" id="modal-card"></div></div>
+<div id="toast" class="toast hidden"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
