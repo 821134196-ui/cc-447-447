@@ -13,3 +13,8 @@ build/
 轨迹/
 录屏/
 视频/
+
+# 运行时数据（SQLite 与交接附件，启动时自动重建）
+/data/*.db
+/data/handover/*
+!/data/handover/.gitkeep

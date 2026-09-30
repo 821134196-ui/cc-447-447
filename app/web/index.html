@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>社区换热站供暖曲线与报修联动系统</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="login-view" class="login-wrap">
+  <div class="login-card">
+    <div class="brand">
+      <span class="dot dot-supply"></span><span class="dot dot-return"></span>
+      <h1>换热站运行联动平台</h1>
+    </div>
+    <p class="muted">选择演示账号登录（无需密码）</p>
+    <div class="login-users">
+      <button data-user="zhang">张建国 <em>值班员</em></button>
+      <button data-user="li">李雪 <em>值班员</em></button>
+      <button data-user="wang">王磊 <em>供热经理</em></button>
+      <button data-user="sun">孙涛 <em>运维</em></button>
+      <button data-user="zhou">周敏 <em>客服</em></button>
+    </div>
+    <p id="login-err" class="err"></p>
+  </div>
+</div>
+
+<div id="app" class="app hidden">
+  <header class="topbar">
+    <div class="topbar-title">
+      <span class="dot dot-supply"></span><span class="dot dot-return"></span>
+      <b>滨河花园换热站</b><span class="muted" id="clock"></span>
+    </div>
+    <nav id="nav">
+      <a data-view="overview">站点总览</a>
+      <a data-view="curves">曲线编辑</a>
+      <a data-view="trend">实时趋势</a>
+      <a data-view="approval">指令审批</a>
+      <a data-view="complaints">报修聚合</a>
+      <a data-view="handover">班次交接</a>
+      <a data-view="callback">回访统计</a>
+    </nav>
+    <div class="topbar-user">
+      <span id="user-badge"></span>
+      <button class="btn btn-ghost" id="btn-logout">退出</button>
+    </div>
+  </header>
+
+  <main id="view" class="view"></main>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+<script src="app.js"></script>
+</body>
+</html>
